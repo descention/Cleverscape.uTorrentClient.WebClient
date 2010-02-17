@@ -818,6 +818,15 @@ namespace Cleverscape.UTorrentClient.WebClient
             }
         }
 
+		public string Magnet
+		{
+			get
+			{
+				// Does not return the correct btih hash
+				return "magnet:?xl=" + this._sizeTotalBytes + "&xt=urn:btih:" +  this.Hash;
+			}
+		}
+
         #endregion
 
         #region Public Properties (Collections)
