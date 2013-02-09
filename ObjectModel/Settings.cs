@@ -23,15 +23,15 @@ namespace Cleverscape.UTorrentClient.WebClient
             Type = SettingType.String;
         }
 
-        internal static SettingType Parse(string Type)
+        internal static SettingType Parse(int Type)
         {
             switch (Type)
             {
-                case "0":
+                case 0:
                     return SettingType.Integer;
-                case "1":
+                case 1:
                     return SettingType.Boolean;
-                case "2":
+                case 2:
                     return SettingType.String;
                 default:
                     return SettingType.String;
@@ -72,7 +72,9 @@ namespace Cleverscape.UTorrentClient.WebClient
             switch (Setting.Type)
             {
                 case SettingType.Integer:
-                    ((SettingInteger)Setting).ValueInternal = int.Parse(Value);
+                    int result = 0;
+                    int.TryParse(Value, out result);
+                    ((SettingInteger)Setting).ValueInternal = result;
                     break;
                 case SettingType.String:
                     ((SettingString)Setting).ValueInternal = Value;
@@ -242,25 +244,26 @@ namespace Cleverscape.UTorrentClient.WebClient
             _settingsCollectionInternal = new List<SettingBase>();
         }
 
-        internal void ParseSettings(List<string[]> Settings, UTorrentWebClient ParentWebClient)
+        internal void ParseSettings(List<object[]> Settings, UTorrentWebClient ParentWebClient)
         {
-            foreach (string[] SettingArray in Settings)
+            foreach (object[] SettingArray in Settings)
             {
-                if (SettingArray.Length != 3)
+                if (SettingArray.Length != 4)
                 {
                     throw new FormatException("The array of setting data was not in the expected format.");
                 }
-                SettingType CurrentType = SettingBase.Parse(SettingArray[1]);
-                SettingBase NewSetting = this.GetByNameAndType(SettingArray[0], CurrentType);
+
+                SettingType CurrentType = SettingBase.Parse((int)SettingArray[1]);
+                SettingBase NewSetting = this.GetByNameAndType((string)SettingArray[0], CurrentType);
                 if (NewSetting == null)
                 {
-                    NewSetting = SettingBase.CreateSetting(CurrentType, SettingArray[0], ParentWebClient);
-                    SettingBase.SetValue(NewSetting, SettingArray[2]);
+                    NewSetting = SettingBase.CreateSetting(CurrentType, (string)SettingArray[0], ParentWebClient);
+                    SettingBase.SetValue(NewSetting, (string)SettingArray[2]);
                     _settingsCollectionInternal.Add(NewSetting);
                 }
                 else
                 {
-                    SettingBase.SetValue(NewSetting, SettingArray[2]);
+                    SettingBase.SetValue(NewSetting, (string)SettingArray[2]);
                 }
                 // Note: this assumes settings will never be removed from the list that uTorrent returns. 
                 // This assumption should be true unless the server (i.e. uTorrent) is upgraded or changed whilst the client is active.

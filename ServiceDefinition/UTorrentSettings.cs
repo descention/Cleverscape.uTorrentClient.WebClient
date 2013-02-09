@@ -18,7 +18,7 @@ namespace Cleverscape.UTorrentClient.WebClient.ServiceDefinition
     }
 
     [CollectionDataContract(Namespace = "")]
-    public class UTorrentSettingsList : List<string[]>
+    public class UTorrentSettingsList : List<object[]>
     {
 
     }
