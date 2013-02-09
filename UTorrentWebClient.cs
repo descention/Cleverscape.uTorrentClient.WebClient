@@ -113,12 +113,13 @@ namespace Cleverscape.UTorrentClient.WebClient
 
             CustomBinding uTorrentCustomBinding = new CustomBinding(
                 new WebMessageEncodingBindingElement() { ContentTypeMapper = new JsonContentTypeMapper() },
-                new HttpTransportBindingElement() { ManualAddressing = true, AuthenticationScheme = System.Net.AuthenticationSchemes.Basic, Realm = "uTorrent", AllowCookies = false }
+                new HttpTransportBindingElement() { ManualAddressing = true, AuthenticationScheme = System.Net.AuthenticationSchemes.Basic, Realm = "uTorrent", AllowCookies = true }
                 );
             EndpointAddress uTorrentEndpointAddress = new EndpointAddress(_uTorrentAddress);
-
+            
             ChannelFactory = new WebChannelFactory<IUTorrentWebClient>(uTorrentCustomBinding);
             ChannelFactory.Endpoint.Address = uTorrentEndpointAddress;
+            ChannelFactory.Endpoint.Behaviors.Add(new CookieManagerEndpointBehavior());
             ChannelFactory.Credentials.UserName.UserName = _uTorrentUserName;
             ChannelFactory.Credentials.UserName.Password = _uTorrentPassword;
             ServiceClient = ChannelFactory.CreateChannel();
@@ -411,23 +412,25 @@ namespace Cleverscape.UTorrentClient.WebClient
         /// <param name="FileName">The filename to upload the torrent using</param>
         public void AddTorrent(Stream TorrentStream, string FileName)
         {
+            string boundary = "---------------------------" + DateTime.Now.Ticks.ToString("x");
             CredentialCache uTorrentCredentials = new CredentialCache();
             uTorrentCredentials.Add(new Uri(_uTorrentAddress), "Basic", new NetworkCredential(_uTorrentUserName, _uTorrentPassword));
-            HttpWebRequest PostFileRequest = (HttpWebRequest)(HttpWebRequest.Create(String.Format("{0}?action=add-file", _uTorrentAddress)));
+            HttpWebRequest PostFileRequest = (HttpWebRequest)(HttpWebRequest.Create(string.Format("{0}?token={1}&action=add-file", _uTorrentAddress, _token)));
             PostFileRequest.KeepAlive = false;
             PostFileRequest.Credentials = uTorrentCredentials;
-            string BoundaryString = Guid.NewGuid().ToString("N");
-            PostFileRequest.ContentType = "multipart/form-data; boundary=" + BoundaryString;
+            PostFileRequest.ContentType = "multipart/form-data; boundary=" + boundary;
+            PostFileRequest.Headers.Add("Cookie", CookieManagerMessageInspector.Instance.SharedCookie); // a GUID
             PostFileRequest.Method = "POST";
+            PostFileRequest.ServicePoint.Expect100Continue = false;
 
             using (BinaryWriter Writer = new BinaryWriter(PostFileRequest.GetRequestStream()))
             {
                 byte[] FileBytes = new byte[TorrentStream.Length];
                 TorrentStream.Read(FileBytes, 0, FileBytes.Length);
 
-                Writer.Write(Encoding.ASCII.GetBytes(String.Format("--{0}\r\nContent-Disposition: form-data; name=\"torrent_file\"; filename=\"{0}\"\r\nContent-Type: application/x-bittorrent\r\n\r\n", BoundaryString, FileName)));
+                Writer.Write(Encoding.ASCII.GetBytes(String.Format("--{0}\r\nContent-Disposition: form-data; name=\"torrent_file\"; filename=\"{0}\"\r\nContent-Type: application/x-bittorrent\r\n\r\n", boundary, FileName)));
                 Writer.Write(FileBytes, 0, FileBytes.Length);
-                Writer.Write(Encoding.ASCII.GetBytes(String.Format("\r\n--{0}--\r\n", BoundaryString)));
+                Writer.Write(Encoding.ASCII.GetBytes(String.Format("\r\n--{0}--\r\n", boundary)));
             }
 
             HttpWebResponse Response = (HttpWebResponse)PostFileRequest.GetResponse();
@@ -621,7 +624,14 @@ namespace Cleverscape.UTorrentClient.WebClient
         {
             UpdatedTorrentsAndLabels UpdatedTorrents = ServiceClient.GetUpdatedTorrentsAndLabels(_cacheID.ToString(), _token);
 
-            _torrents.Parse(UpdatedTorrents.Torrents, UpdatedTorrents.RemovedTorrents, UpdatedTorrents.ChangedTorrents);
+            RemovedTorrentsList removedTorrents = null;
+            if (UpdatedTorrents.RemovedTorrents.Any())
+                removedTorrents = new RemovedTorrentsList() { UpdatedTorrents.RemovedTorrents };
+            ChangedTorrentsList updatedTorrents = null;
+            if (UpdatedTorrents.ChangedTorrents.Any())
+                updatedTorrents = new ChangedTorrentsList() { UpdatedTorrents.ChangedTorrents };
+
+            _torrents.Parse(UpdatedTorrents.Torrents, removedTorrents, updatedTorrents);
             _labels.Parse(UpdatedTorrents.Labels);
             SetCache(UpdatedTorrents.CacheID);
         }

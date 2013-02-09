@@ -16,10 +16,10 @@ namespace Cleverscape.UTorrentClient.WebClient.ServiceDefinition
         public LabelsList Labels { get; set; }
 
         [DataMember(Name = "torrentp", Order = 3)]
-        public ChangedTorrentsList ChangedTorrents { get; set; }
+        public string[] ChangedTorrents { get; set; }
 
         [DataMember(Name = "torrentm", Order = 4)]
-        public RemovedTorrentsList RemovedTorrents { get; set; }
+        public string[] RemovedTorrents { get; set; }
 
         [DataMember(Name = "torrents", Order = 5)]
         public TorrentsList Torrents { get; set; }
