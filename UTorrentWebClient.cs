@@ -713,7 +713,7 @@ namespace Cleverscape.UTorrentClient.WebClient
                     ServiceClient.SetStringSetting(Setting.Name, ((SettingString)Setting).Value, _token);
                     break;
                 case SettingType.Boolean:
-                    ServiceClient.SetBooleanSetting(Setting.Name, ((SettingBoolean)Setting).Value ? "true" : "false", _token);
+                    ServiceClient.SetBooleanSetting(Setting.Name, ((SettingBoolean)Setting).Value ? "1" : "0", _token);
                     break;
                 default:
                     break;
