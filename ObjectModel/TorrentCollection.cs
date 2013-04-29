@@ -30,28 +30,31 @@ namespace Cleverscape.UTorrentClient.WebClient
         internal void Parse(TorrentsList TorrentsToParse, bool IsFresh)
         {
             List<string> ListOfHashes = new List<string>();
-            foreach (string[] TorrentArray in TorrentsToParse)
+            if (TorrentsToParse != null)
             {
-                if (TorrentArray.Length == 0)
+                foreach (string[] TorrentArray in TorrentsToParse)
                 {
-                    throw new FormatException("The array of torrent data was not in the expected format.");
-                }
-                ListOfHashes.Add(TorrentArray[0]);
-                Torrent NewTorrent = GetByHashCode(TorrentArray[0]);
-                if (NewTorrent == null)
-                {
-                    NewTorrent = new Torrent(TorrentArray, this);
-                    _torrentCollectionInternal.Add(NewTorrent);
-                    if (!IsFresh)
+                    if (TorrentArray.Length == 0)
                     {
-                        ParentClient.CallEvent(UTorrentWebClient.EventType.Added, NewTorrent);
+                        throw new FormatException("The array of torrent data was not in the expected format.");
                     }
-                    CallCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, NewTorrent));
-                }
-                else
-                {
-                    NewTorrent.UpdateValuesFromStringArray(TorrentArray);
-                    
+                    ListOfHashes.Add(TorrentArray[0]);
+                    Torrent NewTorrent = GetByHashCode(TorrentArray[0]);
+                    if (NewTorrent == null)
+                    {
+                        NewTorrent = new Torrent(TorrentArray, this);
+                        _torrentCollectionInternal.Add(NewTorrent);
+                        if (!IsFresh)
+                        {
+                            ParentClient.CallEvent(UTorrentWebClient.EventType.Added, NewTorrent);
+                        }
+                        CallCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Add, NewTorrent));
+                    }
+                    else
+                    {
+                        NewTorrent.UpdateValuesFromStringArray(TorrentArray);
+
+                    }
                 }
             }
             IEnumerable<Torrent> RemovedTorrents = RemoveWhereHashCodeIsNotInList(ListOfHashes);
